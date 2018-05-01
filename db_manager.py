@@ -15,53 +15,83 @@ class Topic(Base):
     __tablename__ = 'topic'
 
     id = Column(Integer, primary_key=True)
-    topic_id = Column(Integer)
+    topic_id = Column(Integer, index=True)
     user_id = Column(Integer)
     reply_num = Column(Integer)
     user_name = Column(String(50))
     topic_title = Column(String(100))
 
     def __repr__(self):
-        return "<Topic(id='{}', topic_id='{}', user_id='{}'".format(self.id, self.topic_id, self.user_id)
+        return "<Topic(id='{}', topic_id='{}', user_id='{})>'".format(self.id, self.topic_id, self.user_id)
 
 
 class DBManager(object):
     def __init__(self, db):
-        self.engine = create_engine('sqlite:///{}'.format(db), echo=False)
-        self._Session = sessionmaker(bind=self.engine)
+        self.__engine = create_engine('sqlite:///{}'.format(db), echo=False)
+        self.__Session = sessionmaker(bind=self.__engine)
 
     def create(self):
-        Base.metadata.create_all(self.engine)
+        Base.metadata.create_all(self.__engine)
 
     def session(self):
-        return self._Session()
+        return self.__Session()
 
     def add_record(self, record):
-        sess = self._Session()
+        sess = self.session()
         sess.add(record)
         sess.commit()
 
     def add_all_record(self, records):
-        sess = self._Session()
+        sess = self.session()
         sess.add_all(records)
         sess.commit()
 
-    def add_all_record_from_list(self, records):
-        self.add_all_record(self.clean_up_list(records))
+
+class MonitorManager(DBManager):
+    def __init__(self, db):
+        super(MonitorManager, self).__init__(db)
+        self.sess = self.session()
+
+    def update_records(self, records):
+        """
+        check(id) -> add(dict) or update(dict)
+        """
+        for record in records:
+            topic = self.check_topic_id(record['topic_id'])
+            if topic:
+                self.update_one_record(record)
+            else:
+                self.add_new_record(record)
+
+    def check_topic_id(self, topic_id):
+        topic = self.sess.query(Topic).filter(Topic.topic_id == topic_id).first()
+        return topic
+
+    def add_new_record(self, record):
+        """
+        create Topic -> add
+        """
+        topic = self.create_topic(record)
+        self.add_record(topic)
+
+    def update_one_record(self, record):
+        sess = self.session()
+        topic = sess.query(Topic).filter(Topic.topic_id == record['topic_id']).first()
+        topic.reply_num = record['reply_num']
+        topic.user_name = record['user_name']
+        topic.topic_title = record['topic_title']
+        sess.commit()
 
     @staticmethod
-    def clean_up_list(record_list):
-        cleaned_records = []
-        for r in record_list:
-            cleaned_records.append(
-                Topic(topic_id=r['topic_id'],
-                      user_id=r['user_id'],
-                      reply_num=r['reply_num'],
-                      user_name=r['user_name'],
-                      topic_title=r['topic_title']
-                      )
-            )
-        return cleaned_records
+    def create_topic(record):
+        topic = Topic(
+            topic_id=record['topic_id'],
+            user_id=record['user_id'],
+            reply_num=record['reply_num'],
+            user_name=record['user_name'],
+            topic_title=record['topic_title']
+        )
+        return topic
 
 
 if __name__ == '__main__':
