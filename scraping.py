@@ -1,4 +1,4 @@
-#!/Users/yeureka/.local/share/virtualenvs/TieBaScraping-QtiMVT_d/bin/python
+#!/home/yeureka/.local/share/virtualenvs/TieBaScraping-CgIFm0CI/bin/python
 import time
 from datetime import datetime
 from random import randint
