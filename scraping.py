@@ -18,8 +18,8 @@ def run(db, ba_name, start_page, end_page):
     for i in range(start_page, end_page+1):
         try:
             r = download_session.page_download(ba_name, i)
-        except Exception:
-            log.error('页面下载错误，page {}'.format(i))
+        except Exception as e:
+            log.error('页面下载错误，page {}'.format(i), e)
         else:
             try:
                 topic_list = get_topic_list(r.text)
@@ -28,8 +28,8 @@ def run(db, ba_name, start_page, end_page):
                 log.info('写入完成，page {}'.format(i))
             except OperationalError as e:
                 log.error('数据库操作错误:', e.orig, '(When)', e.statement)
-            except Exception:
-                log.error('未获取到话题列表，page {}'.format(i))
+            except Exception as e:
+                log.error('未获取到话题列表，page {}'.format(i), e)
                 time.sleep(600)
         finally:
             if 0 < datetime.now().hour < 8:
@@ -49,7 +49,7 @@ if __name__ == '__main__':
         run(tieba_db, name, start, end)
     elif argv[1] == 'monitor':
         end = config['monitor_end_page']
-        tieba_db = MonitorManager(config['monitor_database'])
+        tieba_db = MonitorManager(config['database'])
         run(tieba_db, name, start, end)
     else:
         print('参数错误，尝试 python scraping monitor')
